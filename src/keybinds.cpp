@@ -10,6 +10,7 @@
 #include "keybinds.h"
 #include "fps_metrics.h"
 #include "fps_limiter.h"
+#include "pacing.h"
 
 Clock::time_point last_f2_press, toggle_fps_limit_press, toggle_preset_press, last_f12_press, reload_cfg_press, last_upload_press;
 
@@ -96,5 +97,6 @@ void check_keybinds(struct overlay_params& params, const char* keymap){
       last_f12_press = now;
       if (fpsmetrics)
          fpsmetrics->reset_metrics();
+      pacing.reset();
    }
 }

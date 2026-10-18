@@ -57,6 +57,14 @@ int main() {
    n = pacing_numbers(e, now, 60, 0);
    assert(std::isnan(n.hero) && std::isnan(n.avg) && std::isnan(n.low) && n.n10 == 0);
 
+   // Reset forgets the stall and the run; the next frames start a fresh run.
+   r.reset();
+   n = pacing_numbers(r, now, 60, 60);
+   assert(std::isnan(n.run_avg) && std::isnan(n.missed) && n.n10 == 0);
+   for (int i = 0; i < 60; i++) r.push(now + uint64_t(std::llround((i + 1) * ft)), float(ft / 1e6));
+   n = pacing_numbers(r, now + uint64_t(std::llround(60 * ft)) + 1000, 60, 60);
+   assert(n.n10 == 60 && n.missed == 0 && near(n.run_avg, 60, 0.1f) && near(n.run1, 60, 0.2f));
+
    puts("pacing ok");
    return 0;
 }

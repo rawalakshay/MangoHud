@@ -30,6 +30,14 @@ struct PacingRing {
       n.store(i + 1, std::memory_order_release);
    }
 
+   /** Forget every frame; the run restarts with the next push. */
+   void reset() {
+      n.store(0, std::memory_order_relaxed);
+      hist.fill(0);
+      sum_ms = 0;
+      first_start_ns = 0;
+   }
+
    const Frame& at(uint32_t i) const { return f[i & (N - 1)]; } // i counts from the first frame
    /** Index of the oldest frame still in the ring. */
    static uint32_t oldest(uint32_t n) { return n > N ? n - N : 0; }
