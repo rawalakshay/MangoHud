@@ -745,6 +745,7 @@ set_parameters_from_options(struct overlay_params *params)
       #undef OVERLAY_PARAM_CUSTOM
       params->enabled[OVERLAY_PARAM_ENABLED_histogram] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_fps_only] = 0;
+      params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_battery_icon] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_mangoapp_steam] = 0;
       params->enabled[OVERLAY_PARAM_ENABLED_hide_fsr_sharpness] = 0;
@@ -964,7 +965,7 @@ parse_overlay_config(struct overlay_params *params,
                   const char *env, bool use_existing_preset)
 {
    SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
-   std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
+   std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4, 5};
    auto preset = std::move(params->preset);
    int transfer_function = params->transfer_function;
    *params = {};
@@ -1120,7 +1121,8 @@ parse_overlay_config(struct overlay_params *params,
                                  params->font_file_text,
                                  params->font_glyph_ranges,
                                  params->font_scale,
-                                 params->font_size_secondary
+                                 params->font_size_secondary,
+                                 params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel]
                                 );
 
    // check if user specified an env for fps limiter instead
@@ -1415,6 +1417,9 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
 
          break;
 
+      case 5:
+         add_to_options(params, "pacing_panel", "1");
+         break;
    }
 
    if (!gpus)

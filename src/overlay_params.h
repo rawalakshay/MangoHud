@@ -94,6 +94,7 @@ struct Tracepoint;
    OVERLAY_PARAM_BOOL(battery)                       \
    OVERLAY_PARAM_BOOL(battery_icon)                  \
    OVERLAY_PARAM_BOOL(fps_only)                      \
+   OVERLAY_PARAM_BOOL(pacing_panel)                  \
    OVERLAY_PARAM_BOOL(fsr)                           \
    OVERLAY_PARAM_BOOL(mangoapp_steam)                \
    OVERLAY_PARAM_BOOL(debug)                         \

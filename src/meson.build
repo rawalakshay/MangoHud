@@ -47,6 +47,7 @@ vklayer_files = files(
   'overlay.cpp',
   'overlay_params.cpp',
   'font.cpp',
+  'pacing_panel.cpp',
   'keybinds.cpp',
   'font_unispace.c',
   'logging.cpp',

@@ -489,7 +489,7 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
     if (sw_stats.font_params_hash != params.font_params_hash)
     {
         sw_stats.font_params_hash = params.font_params_hash;
-        create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
+        create_fonts(nullptr, params, sw_stats);
         ImGui_ImplOpenGL3_CreateFontsTexture();
     }
     ImGui_ImplGlfw_NewFrame();
@@ -543,7 +543,7 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     int control_client = -1;
     parse_overlay_config(&params, getenv("MANGOHUD_CONFIG"), false);
-    create_fonts(nullptr, params, sw_stats.font_small, sw_stats.font_text, sw_stats.font_secondary);
+    create_fonts(nullptr, params, sw_stats);
     HUDElements.convert_colors(params);
     init_cpu_stats(params);
     notifier.params = &params;

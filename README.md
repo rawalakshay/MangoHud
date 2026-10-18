@@ -397,6 +397,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
+| `pacing_panel`                     | Frame pacing panel: FPS, 10 s AVG and 1% low, run-wide lows, FPS and frame-time charts and a pacing bar in one fixed panel scaled to the screen. Replaces the normal HUD (also `preset=5`). Target is `fps_limit`, else the display refresh rate, else 60 |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
@@ -444,7 +445,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `permit_upload`                    | Allow uploading of logs to Flightlessmango.com                                        |
 | `picmip`                           | Mip-map LoD bias. Negative values will increase texture sharpness (and aliasing). Positive values will increase texture blurriness `-16`-`16` |
 | `position=`                        | Location of the HUD: `top-left` (default), `top-right`, `middle-left`, `middle-right`, `bottom-left`, `bottom-right`, `top-center`, `bottom-center` |
-| `preset=`                          | Comma separated list of one or more presets. Default is `-1,0,1,2,3,4`. Available presets:<br>`0` (No Hud)<br> `1` (FPS Only)<br> `2` (Horizontal)<br> `3` (Extended)<br> `4` (Detailed)<br>User defined presets can be created by using a [presets.conf](data/presets.conf) file in `~/.config/MangoHud/`.                      |
+| `preset=`                          | Comma separated list of one or more presets. Default is `-1,0,1,2,3,4,5`. Available presets:<br>`0` (No Hud)<br> `1` (FPS Only)<br> `2` (Horizontal)<br> `3` (Extended)<br> `4` (Detailed)<br> `5` (Pacing panel)<br>User defined presets can be created by using a [presets.conf](data/presets.conf) file in `~/.config/MangoHud/`.                      |
 | `procmem`<br>`procmem_shared`, `procmem_virt`| Displays process' memory usage: resident, shared and/or virtual. `procmem` (resident) also toggles others off if disabled |
 | `proc_vram`                        | Display process' VRAM usage                                                           |
 | `ram`<br>`vram`                    | Display system RAM/VRAM usage                                                         |

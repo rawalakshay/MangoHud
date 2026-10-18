@@ -4,9 +4,14 @@
 #include "font_default.h"
 #include "IconsForkAwesome.h"
 #include "forkawesome.h"
+#include "font_plex.h"
+#include "pacing.h"
 
-void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*& small_font, ImFont*& text_font, ImFont*& secondary_font)
+void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, swapchain_stats& sw)
 {
+   ImFont*& small_font = sw.font_small;
+   ImFont*& text_font = sw.font_text;
+   ImFont*& secondary_font = sw.font_secondary;
    auto& io = ImGui::GetIO();
    if (!font_atlas)
         font_atlas = io.Fonts;
@@ -117,6 +122,23 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, ImFont*
       text_font = font_atlas->AddFontFromFileTTF(font_file_text.c_str(), font_size_text, nullptr, glyph_ranges.Data);
    else
       text_font = font_atlas->Fonts[0];
+
+   if (params.enabled[OVERLAY_PARAM_ENABLED_pacing_panel]) {
+      // Panel fonts are baked at the design size times the screen scale; render_pacing_panel
+      // zeroes font_params_hash when the scale changes so this runs again.
+      static const ImWchar plex_range[] = { 0x0020, 0x00FF, 0x2013, 0x2013 /* en dash */, 0x2026, 0x2026 /* ellipsis */, 0x2264, 0x2265 /* <= >= */, 0 };
+      static const char* const plex_faces[] = { plex_mono_semibold_compressed_data_base85, plex_mono_medium_compressed_data_base85,
+                                               plex_sans_cond_semibold_compressed_data_base85, plex_sans_cond_medium_compressed_data_base85 };
+      ImFontConfig plex_cfg;
+      plex_cfg.OversampleH = 1;
+      plex_cfg.OversampleV = 1;
+      float k = sw.pacing_k_wanted > 0 ? sw.pacing_k_wanted : 1.f;
+      sw.pacing_k = k;
+      for (int i = 0; i < PF_COUNT; i++)
+         sw.pacing_fonts[i] = font_atlas->AddFontFromMemoryCompressedBase85TTF(plex_faces[pacing_font_specs[i].face], pacing_font_specs[i].px * k, &plex_cfg, plex_range);
+   } else {
+      for (auto& f : sw.pacing_fonts) f = nullptr;
+   }
 
    font_atlas->Build();
 }

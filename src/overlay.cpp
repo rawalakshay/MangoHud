@@ -25,6 +25,7 @@
 #include "iostats.h"
 #include "amdgpu.h"
 #include "fps_metrics.h"
+#include "pacing.h"
 #include "net.h"
 #include "fex.h"
 #include "ftrace.h"
@@ -241,6 +242,8 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
             frametime_ns;
       frametime_data.push_back(frametime_ms);
       frametime_data.erase(frametime_data.begin());
+      if (real_params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel])
+         pacing.push(now, frametime_ms);
    }
 #ifdef __linux__
    if (gpus)
@@ -695,7 +698,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
    if(real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
       table_flags = ImGuiTableFlags_NoClip | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX;
 
-   if (!real_params->no_display && !steam_focused && get_params()->table_columns){
+   if (real_params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel]) {
+      if (!real_params->no_display && !steam_focused)
+         render_pacing_panel(data, window_size);
+   } else if (!real_params->no_display && !steam_focused && get_params()->table_columns){
       ImGui::Begin("Main", &gui_open, ImGuiWindowFlags_NoDecoration);
       if (ImGui::BeginTable("hud", real_params->table_columns, table_flags )) {
          HUDElements.place = 0;

@@ -361,6 +361,7 @@ if get_option('tests').enabled()
 
   # test('test amdgpu', e, workdir : meson.project_source_root() + '/tests')
 
+  test('pacing', executable('test_pacing', 'tests/test_pacing.cpp', include_directories : inc_common))
 endif
 
 # install helper scripts
