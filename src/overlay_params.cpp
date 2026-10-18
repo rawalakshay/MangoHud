@@ -595,6 +595,7 @@ parse_ftrace(const char *str) {
 #define parse_font_scale_media_player(s) parse_float(s)
 #define parse_cpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
+#define parse_pacing_title(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
 #define parse_font_size_secondary(s) parse_float(s)

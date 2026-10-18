@@ -19,7 +19,7 @@ PacingRing pacing;
 namespace {
 
 constexpr float PW = 380, PAD = 16, IW = PW - 2 * PAD, PH = 476, CHART_H = 72;
-constexpr float TITLE_BASE = 31.7f, PILL_TOP = 16.5f, PILL_H = 20.6f, PILL_BASE = 31.3f;
+constexpr float TITLE_BASE = 31.7f;
 constexpr float EYEBROW_BASE = 58, GRID_LABEL_BASE = 76.2f, GRID_VALUE_BASE = 109.25f;
 constexpr float HERO_BASE = 111, HERO_FPS_BASE = 94, LAST_BASE = 146, RUN_LABEL_BASE = 168, RUN_VALUE_BASE = 190;
 constexpr float FPS_LABEL_BASE = 216, FPS_TOP = 226, FT_LABEL_BASE = 322, FT_TOP = 332;
@@ -91,15 +91,6 @@ struct Painter {
       dl->AddRect(P(x, y), P(x + w, y + h), col, rounding * k, 0, 1.f * k);
    }
 
-   /** Hollow pill with mono text, right edge at right_x; returns its width. */
-   float pill(float right_x, const char* s) const {
-      float w = width(F[PF_MONO_MED_13], 13, s) + 16;
-      rect(right_x - w + 0.5f, PILL_TOP, w - 1, PILL_H, PANEL_SOLID, 4);
-      outline(right_x - w + 0.5f, PILL_TOP, w - 1, PILL_H, LINE, 4);
-      text(right_x - w / 2, PILL_BASE, F[PF_MONO_MED_13], 13, DIM, s, 'c');
-      return w;
-   }
-
    /** Small mono label in a panel-coloured box, left-aligned at left/top. */
    void chart_label_left(float left, float top, const char* s) const {
       const float size = 13, w = width(F[PF_MONO_MED_13], size, s) + 8, h = size * 1.3f;
@@ -165,15 +156,10 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
 
    // ---- chrome ----
    p.rect(0, 0, PW, PH, PANEL, 10);
-   float right = PW - PAD;
-   snprintf(b1, sizeof b1, "TARGET %d", int(std::lround(m.target)));
-   right -= p.pill(right, b1) + 6;
-   if (m.refresh_hz > 0) snprintf(b1, sizeof b1, "%dP%d", int(io.DisplaySize.y), int(std::lround(m.refresh_hz)));
-   else snprintf(b1, sizeof b1, "%dP", int(io.DisplaySize.y));
-   right -= p.pill(right, b1) + 6;
-   std::string title = params.custom_text_center.empty() ? engine_name(data) : params.custom_text_center;
+   std::string title = !params.pacing_title.empty() ? params.pacing_title
+                     : !params.custom_text_center.empty() ? params.custom_text_center : engine_name(data);
    for (auto& c : title) c = toupper(static_cast<unsigned char>(c));
-   p.text(PAD, TITLE_BASE, SANS14, 14, DIM, title.c_str(), 'l', right + 6 - PAD - 8);
+   p.text(PAD, TITLE_BASE, SANS14, 14, DIM, title.c_str(), 'l', IW);
 
    p.text(COL2_R, EYEBROW_BASE, SANSM13, 13, FOOT, "LAST 10 S", 'r');
    p.text(COL1_R, GRID_LABEL_BASE, SANS16, 16, LABEL, "AVG", 'r');
@@ -243,8 +229,9 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
          if (s.share <= 0) continue;
          float w = s.share * avail;
          p.rect(x, PACING_Y, w, PACING_H, s.col, 2);
-         snprintf(b1, sizeof b1, "%d%%", int(std::lround(s.share * 100)));
-         snprintf(b2, sizeof b2, "%s  %s", s.label, b1);
+         const int pct = int(std::lround(s.share * 100));
+         snprintf(b1, sizeof b1, "%d%%", pct);
+         snprintf(b2, sizeof b2, "%s  %d%%", s.label, pct);
          const char* s_lab = w >= p.width(MONO13, 13, b2) + 10 ? b2 : w >= p.width(MONO13, 13, b1) + 8 ? b1 : nullptr;
          if (s_lab) p.text(x + w / 2, PACING_Y + PACING_H - 3.5f, MONO13, 13, PANEL_SOLID, s_lab, 'c');
          x += w + 2;

@@ -401,6 +401,7 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
+| `pacing_title=`                    | Heading of the `pacing_panel`, e.g `pacing_title=Red Dead Redemption 2`. Default is `custom_text_center`, else the graphics API |
 | `reset_fps_metrics`                | Reset fps metrics and the `pacing_panel` run keybind, default is `Shift_R+F9`          |
 | `fps_text`                         | Display custom text for engine name in front of FPS                                   |
 | `frame_count`                      | Display frame count                                                                   |
