@@ -1052,6 +1052,13 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
       params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = false;
 
+   // The pacing panel's system block reads the CPU and GPU samplers and the fans whatever the config shows.
+   if (params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel]) {
+      for (auto e : { OVERLAY_PARAM_ENABLED_cpu_stats, OVERLAY_PARAM_ENABLED_cpu_temp, OVERLAY_PARAM_ENABLED_gpu_stats,
+                      OVERLAY_PARAM_ENABLED_gpu_fan, OVERLAY_PARAM_ENABLED_fan })
+         params->enabled[e] = true;
+   }
+
    if (is_blacklisted())
       return;
 
