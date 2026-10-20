@@ -397,11 +397,12 @@ Parameters that are enabled by default have to be explicitly disabled. These (cu
 | `fps_limit_method`                 | If FPS limiter should wait before or after presenting a frame. Choose `late` (default) for the lowest latency or `early` for the smoothest frametimes |
 | `fps_limit`                        | Limit the apps framerate. Comma-separated list of one or more FPS values. `0` means unlimited |
 | `fps_only`                         | Show FPS only. ***Not meant to be used with other display params***                   |
-| `pacing_panel`                     | Frame pacing panel: FPS, 10 s AVG and 1% low, run-wide lows, FPS and frame-time charts, a pacing bar and a system block (GPU and CPU load bars, a temperature row, a fan row and the GPU throttle state when the driver reports one) in one fixed panel scaled to the screen. Replaces the normal HUD (also `preset=5`). Target is `fps_limit`, else the display refresh rate, else 60. Turns on `cpu_stats`, `cpu_temp`, `gpu_stats`, `gpu_fan` and `fan` for its samplers; NVIDIA throttle reasons need `throttling_status` |
+| `pacing_panel`                     | Frame pacing panel: FPS, 10 s AVG and 1% low, run-wide lows, FPS and frame-time charts, a pacing bar, then a total CPU load bar and a CPU temperature bar, in one fixed panel scaled to the screen. Replaces the normal HUD (also `preset=5`). Target is `fps_limit`, else the display refresh rate, else 60. Turns on `cpu_stats` and `cpu_temp` for its bars |
 | `fps_sampling_period=`             | Time interval between two sampling points for gathering the FPS in milliseconds. Default is `500`   |
 | `fps_value`                        | Choose the break points where `fps_color_change` changes colors between. E.g `60,144`, default is `30,60` |
 | `fps_metrics`                      | Takes a list of decimal values or the value avg, e.g `avg,0.001`                      |
 | `pacing_title=`                    | Heading of the `pacing_panel`, e.g `pacing_title=Red Dead Redemption 2`. Default is `custom_text_center`, else the graphics API |
+| `pacing_subtitle=`                 | Text in the top-right corner of the `pacing_panel`, e.g `pacing_subtitle=PS5 13.60`. Empty by default |
 | `reset_fps_metrics`                | Reset fps metrics and the `pacing_panel` run keybind, default is `Shift_R+F9`          |
 | `fps_text`                         | Display custom text for engine name in front of FPS                                   |
 | `frame_count`                      | Display frame count                                                                   |

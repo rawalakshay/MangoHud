@@ -222,6 +222,7 @@ struct Tracepoint;
    OVERLAY_PARAM_CUSTOM(text_outline_thickness)      \
    OVERLAY_PARAM_CUSTOM(fps_text)                    \
    OVERLAY_PARAM_CUSTOM(pacing_title)                \
+   OVERLAY_PARAM_CUSTOM(pacing_subtitle)             \
    OVERLAY_PARAM_CUSTOM(device_battery)              \
    OVERLAY_PARAM_CUSTOM(fps_metrics)                 \
    OVERLAY_PARAM_CUSTOM(network)                     \
@@ -353,6 +354,7 @@ struct overlay_params {
    uint32_t font_glyph_ranges;
    std::string custom_text_center;
    std::string pacing_title;
+   std::string pacing_subtitle;
    std::string custom_text;
    std::string config_file_path;
    std::unordered_map<std::string,std::string> options;

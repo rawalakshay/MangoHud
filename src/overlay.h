@@ -50,7 +50,7 @@ struct swapchain_stats {
    ImFont* font_small = nullptr;
    ImFont* font_text = nullptr;
    ImFont* font_secondary = nullptr;
-   ImFont* pacing_fonts[9] = {};   // see pacing_panel.cpp; baked at pacing_k
+   ImFont* pacing_fonts[10] = {};   // see pacing_panel.cpp; baked at pacing_k
    float pacing_k = 0, pacing_k_wanted = 0;
    size_t font_params_hash = 0;
    std::string time;

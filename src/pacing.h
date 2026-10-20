@@ -60,10 +60,10 @@ struct PacingNumbers {
 
 // Fonts the panel bakes into the atlas (face: 0 Mono SemiBold, 1 Mono Medium, 2 Sans Cond SemiBold, 3 Sans Cond Medium).
 enum PacingFont { PF_MONO_SEMI_72, PF_MONO_SEMI_26, PF_MONO_SEMI_20, PF_MONO_SEMI_16, PF_MONO_SEMI_13,
-                  PF_MONO_MED_13, PF_SANS_SEMI_16, PF_SANS_SEMI_14, PF_SANS_MED_13, PF_COUNT };
+                  PF_MONO_MED_13, PF_SANS_SEMI_20, PF_SANS_SEMI_16, PF_SANS_SEMI_14, PF_SANS_MED_13, PF_COUNT };
 struct PacingFontSpec { int face; float px; };
 constexpr PacingFontSpec pacing_font_specs[PF_COUNT] = {
-   {0, 72}, {0, 26}, {0, 20}, {0, 16}, {0, 13}, {1, 13}, {2, 16}, {2, 14}, {3, 13},
+   {0, 72}, {0, 26}, {0, 20}, {0, 16}, {0, 13}, {1, 13}, {2, 20}, {2, 16}, {2, 14}, {3, 13},
 };
 
 /** Linear-interpolated percentile of an ascending vector (overlay analysis.js percentile). */

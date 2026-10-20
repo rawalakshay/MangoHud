@@ -13,26 +13,21 @@
 #include "hud_elements.h"
 #include "fps_limiter.h"
 #include "pacing.h"
-#include "gpu.h"
 #include "cpu.h"
 
 PacingRing pacing;
 
 namespace {
 
-constexpr float PW = 380, PAD = 16, IW = PW - 2 * PAD, PH = 607, CHART_H = 72;
-constexpr float TITLE_BASE = 31.7f;
+constexpr float PW = 380, PAD = 16, IW = PW - 2 * PAD, PH = 568, CHART_H = 72;
+constexpr float TITLE_BASE = 31.7f, TITLE_LINE_Y = 42;
 constexpr float EYEBROW_BASE = 58, GRID_LABEL_BASE = 76.2f, GRID_VALUE_BASE = 109.25f;
 constexpr float HERO_BASE = 111, HERO_FPS_BASE = 94, LAST_BASE = 146, RUN_LABEL_BASE = 168, RUN_VALUE_BASE = 190;
 constexpr float FPS_LABEL_BASE = 216, FPS_TOP = 226, FT_LABEL_BASE = 322, FT_TOP = 332;
 constexpr float PACING_BASE = 428, PACING_Y = 436, PACING_H = 14;
-// System block, on the panel's own rhythm: a section label 24 px under the pacing bar, 22 px per text row and
-// 33 px before the 26 px temperatures (as RUN label -> value and AVG label -> value above); the load bar and the
-// TEMP / FAN cells sit on the run-stat grid (right edges at IW/4 steps), the last column shared with every right-aligned value.
-constexpr float SYS_BASE = 474, LOAD_ROW_BASE[2] = { 496, 518 }, TEMP_ROW_BASE = 551, FAN_ROW_BASE = 573, FOOT_BASE = 597;
-constexpr float GRID_C1 = PAD + IW / 4, GRID_C3 = PAD + IW * 3 / 4;
-constexpr float BAR_X = GRID_C1, BAR_W = GRID_C3 - GRID_C1, BAR_H = 8;
-constexpr int GPU_WARN_C = 85, CPU_WARN_C = 90; // amber from 10 °C below, red from here
+// Two more bars in the pacing-bar style, on the same rhythm: label 24 px under the previous bar, bar 8 px under the label.
+constexpr float LOAD_BASE = 474, LOAD_Y = 482, TEMP_BASE = 520, TEMP_Y = 528, FOOT_BASE = 558;
+constexpr int CPU_WARN_C = 90; // the temperature bar turns amber 10 °C below this and red from here
 constexpr float COL1_R = PW - PAD - 62.4f - 18, COL2_R = PW - PAD;
 constexpr int FT_SHOW = 89, MAX_OVERFLOW_LABELS = 4;
 constexpr float DESCENT = 0.275f; // libass anchors text by ascent + descent; the design's baselines assume Plex's 0.275 em descent
@@ -127,40 +122,14 @@ Model model() {
    return m;
 }
 
-ImU32 temp_color(int c, int warn) { return c >= warn ? RED : c >= warn - 10 ? AMBER : TEXT; }
-
-void load_row(const Painter& p, float base, const char* name, bool have, float load) {
-   p.text(PAD, base, p.F[PF_SANS_SEMI_16], 16, LABEL, name);
-   p.text(BAR_X - 8, base, p.F[PF_SANS_MED_13], 13, FOOT, "LOAD", 'r');
-   p.rect(BAR_X, base - BAR_H, BAR_W, BAR_H, LINE, 2);
-   if (!have) { p.text(COL2_R, base, p.F[PF_MONO_SEMI_16], 16, FOOT, DASH, 'r'); return; }
-   const float share = std::max(0.f, std::min(1.f, load / 100.f));
-   if (share > 0) p.rect(BAR_X, base - BAR_H, std::max(BAR_H, BAR_W * share), BAR_H, BLUE, 2);
-   char b[16];
-   snprintf(b, sizeof b, "%d%%", int(std::lround(load)));
-   p.text(COL2_R, base, p.F[PF_MONO_SEMI_16], 16, TEXT, b, 'r');
-}
-
-/** One column of the TEMP or FAN row, right-aligned at `right`: device name, value, unit. */
-void cell(const Painter& p, float right, float base, const char* dev, ImFont* f, float size, ImU32 col, const char* value, const char* unit = "") {
-   p.runs(right, base, { {p.F[PF_SANS_MED_13], 13, FOOT, dev}, {f, size, col, value}, {p.F[PF_SANS_MED_13], 13, FOOT, unit} }, 'r');
-}
-
-/** temp_c <= 0 draws a dash: drivers that cannot read a temperature leave it at 0. */
-void temp_cell(const Painter& p, float right, float base, const char* dev, int temp_c, int warn) {
-   if (temp_c <= 0) { cell(p, right, base, dev, p.F[PF_MONO_SEMI_26], 26, FOOT, DASH); return; }
-   const bool f = HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit];
-   char b[16];
-   snprintf(b, sizeof b, "%d\xC2\xB0", f ? HUDElements.convert_to_fahrenheit(temp_c) : temp_c);
-   cell(p, right, base, dev, p.F[PF_MONO_SEMI_26], 26, temp_color(temp_c, warn), b);
-}
-
-/** fan < 0 draws a dash (no fan sensor). */
-void fan_cell(const Painter& p, float right, float base, const char* dev, int fan, bool rpm) {
-   if (fan < 0) { cell(p, right, base, dev, p.F[PF_MONO_SEMI_16], 16, FOOT, DASH); return; }
-   char b[16];
-   snprintf(b, sizeof b, "%d", fan);
-   cell(p, right, base, dev, p.F[PF_MONO_SEMI_16], 16, TEXT, b, rpm ? " RPM" : " %");
+/** A full-width bar like the pacing bar: `share` of it filled, the label inside the fill when it fits, else right after it. */
+void bar(const Painter& p, float y, float share, ImU32 col, const char* label) {
+   ImFont* MONO13 = p.F[PF_MONO_SEMI_13];
+   p.rect(PAD, y, IW, PACING_H, LINE, 2);
+   const float w = share > 0 ? std::max(PACING_H, IW * std::min(1.f, share)) : 0.f;
+   if (w > 0) p.rect(PAD, y, w, PACING_H, col, 2);
+   if (w >= p.width(MONO13, 13, label) + 10) p.text(PAD + w / 2, y + PACING_H - 3.5f, MONO13, 13, PANEL_SOLID, label, 'c');
+   else p.text(PAD + w + 6, y + PACING_H - 3.5f, MONO13, 13, LABEL, label);
 }
 
 } // namespace
@@ -204,7 +173,14 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
    std::string title = !params.pacing_title.empty() ? params.pacing_title
                      : !params.custom_text_center.empty() ? params.custom_text_center : engine_name(data);
    for (auto& c : title) c = toupper(static_cast<unsigned char>(c));
-   p.text(PAD, TITLE_BASE, SANS14, 14, DIM, title.c_str(), 'l', IW);
+   float title_w = IW;
+   if (!params.pacing_subtitle.empty()) {
+      std::string sub = params.pacing_subtitle;
+      for (auto& c : sub) c = toupper(static_cast<unsigned char>(c));
+      title_w -= p.text(PW - PAD, TITLE_BASE, p.F[PF_SANS_SEMI_20], 20, LABEL, sub.c_str(), 'r') + 8;
+   }
+   p.text(PAD, TITLE_BASE, SANS14, 14, DIM, title.c_str(), 'l', title_w);
+   p.rect(PAD, TITLE_LINE_Y, IW, 1, LINE);
 
    p.text(COL2_R, EYEBROW_BASE, SANSM13, 13, FOOT, "LAST 10 S", 'r');
    p.text(COL1_R, GRID_LABEL_BASE, SANS16, 16, LABEL, "AVG", 'r');
@@ -335,33 +311,25 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
                                      {MONO16, 16, std::isnan(ft_max) ? TEXT : ft_text_color(ft_max, m.target_ms), fmt1(b2, sizeof b2, ft_max)},
                                      {MONO13, 13, DIM, " ms"} }, 'r');
 
-   // ---- system block ----
-   p.runs(PAD, SYS_BASE, { {SANS16, 16, LABEL, "SYSTEM"}, {SANSM13, 13, FOOT, " \xC2\xB7 LOAD \xC2\xB7 TEMP \xC2\xB7 FAN"} });
-   std::shared_ptr<GPU> gpu = gpus ? gpus->active_gpu() : nullptr;
-   const bool have_gpu = gpu && params.enabled[OVERLAY_PARAM_ENABLED_gpu_stats];
-   if (have_gpu) {
-      // Only shown while a reason is set: drivers without throttle reporting (nvidia without throttling_status,
-      // amdgpu without gpu_metrics) never set one, so a "no throttle" line could not be trusted.
-      const auto& gm = gpu->metrics;
-      std::string why;
-      for (auto& r : { std::make_pair(gm.is_temp_throttled, "THERMAL"), std::make_pair(gm.is_power_throttled, "POWER"),
-                       std::make_pair(gm.is_current_throttled, "CURRENT"), std::make_pair(gm.is_other_throttled, "OTHER") })
-         if (r.first) why += (why.empty() ? "THROTTLE \xC2\xB7 " : " \xC2\xB7 ") + std::string(r.second);
-      if (!why.empty()) p.text(PW - PAD, SYS_BASE, SANSM13, 13, RED, why.c_str(), 'r');
-   }
+   // ---- total load and temperature ----
    const bool have_cpu = params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
    const auto& cpu = cpuStats.GetCPUDataTotal();
-   load_row(p, LOAD_ROW_BASE[0], "GPU", have_gpu, have_gpu ? gpu->metrics.load : 0.f);
-   load_row(p, LOAD_ROW_BASE[1], "CPU", have_cpu, cpu.percent);
-   p.text(PAD, TEMP_ROW_BASE, SANS16, 16, LABEL, "TEMP");
-   temp_cell(p, GRID_C3, TEMP_ROW_BASE, "GPU  ", have_gpu ? gpu->metrics.temp : 0, GPU_WARN_C);
-   temp_cell(p, COL2_R, TEMP_ROW_BASE, "CPU  ", have_cpu && params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] ? cpu.temp : 0, CPU_WARN_C);
-   p.text(PAD, FAN_ROW_BASE, SANS16, 16, LABEL, "FAN");
-   // A fan was read only if the driver flagged the unit: amdgpu sets fan_rpm when its hwmon fan exists, nvidia reports
-   // percent or RPM; anything else (intel, an AMD card without a fan sensor) leaves the default 0 that is not a reading.
-   const bool gpu_fan_known = have_gpu && !gpu->is_apu() && (gpu->metrics.fan_rpm || gpu->vendor_id == 0x10de);
-   fan_cell(p, GRID_C3, FAN_ROW_BASE, "GPU  ", gpu_fan_known ? gpu->metrics.fan_speed : -1, gpu_fan_known && gpu->metrics.fan_rpm);
-   fan_cell(p, COL2_R, FAN_ROW_BASE, "CPU  ", have_cpu ? cpuStats.GetPlatformFanSpeed() : -1, true); // the Steam Deck fan; desktops have no CPU fan sensor
+   p.text(PAD, LOAD_BASE, SANS16, 16, LABEL, "TOTAL LOAD");
+   if (have_cpu) {
+      snprintf(b1, sizeof b1, "%d%%", int(std::lround(cpu.percent)));
+      bar(p, LOAD_Y, cpu.percent / 100.f, BLUE, b1);
+   } else {
+      bar(p, LOAD_Y, 0, BLUE, DASH);
+   }
+   p.text(PAD, TEMP_BASE, SANS16, 16, LABEL, "TEMPERATURE");
+   const int temp_c = have_cpu && params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] ? cpu.temp : 0;
+   if (temp_c > 0) { // a sensor that cannot be read leaves 0
+      if (params.enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit]) snprintf(b1, sizeof b1, "%d \xC2\xB0" "F", HUDElements.convert_to_fahrenheit(temp_c));
+      else snprintf(b1, sizeof b1, "%d \xC2\xB0" "C", temp_c);
+      bar(p, TEMP_Y, temp_c / 100.f, temp_c >= CPU_WARN_C ? RED : temp_c >= CPU_WARN_C - 10 ? AMBER : BLUE, b1);
+   } else {
+      bar(p, TEMP_Y, 0, BLUE, DASH);
+   }
 
    // Footer timecode m:ss.ff since the overlay started.
    auto cs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - HUDElements.overlay_start).count() / 10;

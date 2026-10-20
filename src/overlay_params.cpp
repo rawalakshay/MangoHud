@@ -596,6 +596,7 @@ parse_ftrace(const char *str) {
 #define parse_cpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
 #define parse_pacing_title(s) parse_str(s)
+#define parse_pacing_subtitle(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
 #define parse_font_size_secondary(s) parse_float(s)
@@ -1052,12 +1053,9 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
       params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = false;
 
-   // The pacing panel's system block reads the CPU and GPU samplers and the fans whatever the config shows.
-   if (params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel]) {
-      for (auto e : { OVERLAY_PARAM_ENABLED_cpu_stats, OVERLAY_PARAM_ENABLED_cpu_temp, OVERLAY_PARAM_ENABLED_gpu_stats,
-                      OVERLAY_PARAM_ENABLED_gpu_fan, OVERLAY_PARAM_ENABLED_fan })
-         params->enabled[e] = true;
-   }
+   // The pacing panel's load and temperature bars need the CPU sampler whatever the config shows.
+   if (params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel])
+      params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = true;
 
    if (is_blacklisted())
       return;

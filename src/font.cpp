@@ -6,6 +6,7 @@
 #include "forkawesome.h"
 #include "font_plex.h"
 #include "pacing.h"
+#include <iterator>
 
 void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, swapchain_stats& sw)
 {
@@ -134,6 +135,7 @@ void create_fonts(ImFontAtlas* font_atlas, const overlay_params& params, swapcha
       plex_cfg.OversampleV = 1;
       float k = sw.pacing_k_wanted > 0 ? sw.pacing_k_wanted : 1.f;
       sw.pacing_k = k;
+      static_assert(std::size(sw.pacing_fonts) >= PF_COUNT, "swapchain_stats::pacing_fonts is smaller than the panel's font list");
       for (int i = 0; i < PF_COUNT; i++)
          sw.pacing_fonts[i] = font_atlas->AddFontFromMemoryCompressedBase85TTF(plex_faces[pacing_font_specs[i].face], pacing_font_specs[i].px * k, &plex_cfg, plex_range);
    } else {
