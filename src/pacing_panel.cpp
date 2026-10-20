@@ -357,7 +357,10 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
    temp_cell(p, GRID_C3, TEMP_ROW_BASE, "GPU  ", have_gpu ? gpu->metrics.temp : 0, GPU_WARN_C);
    temp_cell(p, COL2_R, TEMP_ROW_BASE, "CPU  ", have_cpu && params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] ? cpu.temp : 0, CPU_WARN_C);
    p.text(PAD, FAN_ROW_BASE, SANS16, 16, LABEL, "FAN");
-   fan_cell(p, GRID_C3, FAN_ROW_BASE, "GPU  ", have_gpu && !gpu->is_apu() ? gpu->metrics.fan_speed : -1, !have_gpu || gpu->metrics.fan_rpm);
+   // A fan was read only if the driver flagged the unit: amdgpu sets fan_rpm when its hwmon fan exists, nvidia reports
+   // percent or RPM; anything else (intel, an AMD card without a fan sensor) leaves the default 0 that is not a reading.
+   const bool gpu_fan_known = have_gpu && !gpu->is_apu() && (gpu->metrics.fan_rpm || gpu->vendor_id == 0x10de);
+   fan_cell(p, GRID_C3, FAN_ROW_BASE, "GPU  ", gpu_fan_known ? gpu->metrics.fan_speed : -1, gpu_fan_known && gpu->metrics.fan_rpm);
    fan_cell(p, COL2_R, FAN_ROW_BASE, "CPU  ", have_cpu ? cpuStats.GetPlatformFanSpeed() : -1, true); // the Steam Deck fan; desktops have no CPU fan sensor
 
    // Footer timecode m:ss.ff since the overlay started.
