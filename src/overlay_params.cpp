@@ -1053,7 +1053,7 @@ parse_overlay_config(struct overlay_params *params,
    if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
       params->enabled[OVERLAY_PARAM_ENABLED_legacy_layout] = false;
 
-   // The pacing panel's load and temperature bars need the CPU sampler whatever the config shows.
+   // The pacing panel's temperature bar needs the CPU sampler (the temperature is read inside it) whatever the config shows.
    if (params->enabled[OVERLAY_PARAM_ENABLED_pacing_panel])
       params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats] = params->enabled[OVERLAY_PARAM_ENABLED_cpu_temp] = true;
 

@@ -19,15 +19,18 @@ PacingRing pacing;
 
 namespace {
 
-constexpr float PW = 380, PAD = 16, IW = PW - 2 * PAD, PH = 568, CHART_H = 72;
+constexpr float PW = 380, PAD = 16, IW = PW - 2 * PAD, PH = 628, CHART_H = 72;
 constexpr float TITLE_BASE = 31.7f, TITLE_LINE_Y = 42;
 constexpr float EYEBROW_BASE = 58, GRID_LABEL_BASE = 76.2f, GRID_VALUE_BASE = 109.25f;
 constexpr float HERO_BASE = 111, HERO_FPS_BASE = 94, LAST_BASE = 146, RUN_LABEL_BASE = 168, RUN_VALUE_BASE = 190;
 constexpr float FPS_LABEL_BASE = 216, FPS_TOP = 226, FT_LABEL_BASE = 322, FT_TOP = 332;
 constexpr float PACING_BASE = 428, PACING_Y = 436, PACING_H = 14;
-// Two more bars in the pacing-bar style, on the same rhythm: label 24 px under the previous bar, bar 8 px under the label.
-constexpr float LOAD_BASE = 474, LOAD_Y = 482, TEMP_BASE = 520, TEMP_Y = 528, FOOT_BASE = 558;
-constexpr int CPU_WARN_C = 90; // the temperature bar turns amber 10 °C below this and red from here
+// Temperature: a bar in the pacing-bar style (label 24 px under the pacing bar, bar 8 px under the label), then a
+// 60 s chart in the FPS chart's style: 40 slices of 1.5 s, bars from TEMP_LO to TEMP_HI °C, a grid line at CPU_WARN_C.
+constexpr float TEMP_BASE = 474, TEMP_Y = 482, TEMP_LABEL_BASE = 520, TEMP_TOP = 530, FOOT_BASE = 618;
+constexpr int CPU_WARN_C = 90; // amber 10 °C below this, red from here
+constexpr float TEMP_LO = 30, TEMP_HI = 100;
+constexpr uint64_t TEMP_SLICE_NS = 1500000000ull;
 constexpr float COL1_R = PW - PAD - 62.4f - 18, COL2_R = PW - PAD;
 constexpr int FT_SHOW = 89, MAX_OVERFLOW_LABELS = 4;
 constexpr float DESCENT = 0.275f; // libass anchors text by ascent + descent; the design's baselines assume Plex's 0.275 em descent
@@ -121,6 +124,8 @@ Model model() {
    m.y_max = std::max(target, std::min(1.25f * target, m.refresh_hz > 0 ? m.refresh_hz : 1.25f * target));
    return m;
 }
+
+ImU32 temp_color(float c) { return c >= CPU_WARN_C ? RED : c >= CPU_WARN_C - 10 ? AMBER : BLUE; }
 
 /** A full-width bar like the pacing bar: `share` of it filled, the label inside the fill when it fits, else right after it. */
 void bar(const Painter& p, float y, float share, ImU32 col, const char* label) {
@@ -311,25 +316,39 @@ void render_pacing_panel(swapchain_stats& data, ImVec2& window_size)
                                      {MONO16, 16, std::isnan(ft_max) ? TEXT : ft_text_color(ft_max, m.target_ms), fmt1(b2, sizeof b2, ft_max)},
                                      {MONO13, 13, DIM, " ms"} }, 'r');
 
-   // ---- total load and temperature ----
-   const bool have_cpu = params.enabled[OVERLAY_PARAM_ENABLED_cpu_stats];
-   const auto& cpu = cpuStats.GetCPUDataTotal();
-   p.text(PAD, LOAD_BASE, SANS16, 16, LABEL, "TOTAL LOAD");
-   if (have_cpu) {
-      snprintf(b1, sizeof b1, "%d%%", int(std::lround(cpu.percent)));
-      bar(p, LOAD_Y, cpu.percent / 100.f, BLUE, b1);
-   } else {
-      bar(p, LOAD_Y, 0, BLUE, DASH);
-   }
+   // ---- temperature ----
+   const bool fahrenheit = params.enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit];
+   auto deg = [&](char* b, size_t n, float c) { // "64 °C" / "147 °F"
+      if (std::isnan(c)) return DASH;
+      snprintf(b, n, "%d \xC2\xB0%c", fahrenheit ? HUDElements.convert_to_fahrenheit(int(c)) : int(c), fahrenheit ? 'F' : 'C');
+      return static_cast<const char*>(b);
+   };
    p.text(PAD, TEMP_BASE, SANS16, 16, LABEL, "TEMPERATURE");
-   const int temp_c = have_cpu && params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] ? cpu.temp : 0;
-   if (temp_c > 0) { // a sensor that cannot be read leaves 0
-      if (params.enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit]) snprintf(b1, sizeof b1, "%d \xC2\xB0" "F", HUDElements.convert_to_fahrenheit(temp_c));
-      else snprintf(b1, sizeof b1, "%d \xC2\xB0" "C", temp_c);
-      bar(p, TEMP_Y, temp_c / 100.f, temp_c >= CPU_WARN_C ? RED : temp_c >= CPU_WARN_C - 10 ? AMBER : BLUE, b1);
-   } else {
-      bar(p, TEMP_Y, 0, BLUE, DASH);
+   const int temp_c = params.enabled[OVERLAY_PARAM_ENABLED_cpu_temp] ? cpuStats.GetCPUDataTotal().temp : 0;
+   if (temp_c > 0) bar(p, TEMP_Y, temp_c / 100.f, temp_color(temp_c), deg(b1, sizeof b1, temp_c)); // a sensor that cannot be read leaves 0
+   else bar(p, TEMP_Y, 0, BLUE, DASH);
+
+   // Last 60 s, newest on the right.
+   static TempHistory temp_hist;
+   temp_hist.push(now / TEMP_SLICE_NS, float(temp_c));
+   float tmn = NAN, tmx = NAN;
+   const float tbw = (IW - (TempHistory::N - 1) * 2) / TempHistory::N;
+   for (int i = 0; i < temp_hist.n; i++) {
+      const float t = temp_hist.v[i];
+      if (std::isnan(t)) continue;
+      tmn = std::isnan(tmn) ? t : std::min(tmn, t);
+      tmx = std::isnan(tmx) ? t : std::max(tmx, t);
+      const float h = std::max(2.f, std::min(1.f, (t - TEMP_LO) / (TEMP_HI - TEMP_LO)) * CHART_H);
+      p.rect(PAD + (TempHistory::N - temp_hist.n + i) * (tbw + 2), TEMP_TOP + CHART_H - h, tbw, h, temp_color(t));
    }
+   p.rect(PAD, TEMP_TOP + CHART_H, IW, 1, LINE);
+   const float wy = TEMP_TOP + CHART_H - CHART_H * (CPU_WARN_C - TEMP_LO) / (TEMP_HI - TEMP_LO);
+   p.rect(PAD, wy, IW, 1, GRID_STRONG);
+   p.chart_label_left(PAD, wy + 3, deg(b1, sizeof b1, CPU_WARN_C));
+   auto tnum = [&](char* b, size_t n, float c) { return fmt0(b, n, std::isnan(c) ? c : fahrenheit ? HUDElements.convert_to_fahrenheit(int(c)) : c); };
+   p.text(PAD, TEMP_LABEL_BASE, SANS16, 16, LABEL, "TEMPERATURE \xC2\xB7 LAST 60 S");
+   p.runs(PW - PAD, TEMP_LABEL_BASE, { {SANS16, 16, LABEL, "MIN "}, {MONO16, 16, TEXT, tnum(b1, sizeof b1, tmn)},
+                                       {SANS16, 16, LABEL, " \xC2\xB7 MAX "}, {MONO16, 16, std::isnan(tmx) || temp_color(tmx) == BLUE ? TEXT : temp_color(tmx), tnum(b2, sizeof b2, tmx)} }, 'r');
 
    // Footer timecode m:ss.ff since the overlay started.
    auto cs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - HUDElements.overlay_start).count() / 10;

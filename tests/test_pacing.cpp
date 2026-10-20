@@ -65,6 +65,19 @@ int main() {
    n = pacing_numbers(r, now + uint64_t(std::llround(60 * ft)) + 1000, 60, 60);
    assert(n.n10 == 60 && n.missed == 0 && near(n.run_avg, 60, 0.1f) && near(n.run1, 60, 0.2f));
 
+   // Temperature history: starts at the first real reading, fills skipped slices with NaN, keeps the last N.
+   TempHistory t;
+   t.push(10, 0);                       // nothing read yet: not stored
+   assert(t.n == 0);
+   t.push(11, 60); t.push(11, 61);      // one slot per slice
+   assert(t.n == 1 && t.v[0] == 60);
+   t.push(14, 64);                      // slices 12 and 13 were never drawn
+   assert(t.n == 4 && std::isnan(t.v[1]) && std::isnan(t.v[2]) && t.v[3] == 64);
+   t.push(15, 0);                       // sensor lost its reading
+   assert(t.n == 5 && std::isnan(t.v[4]));
+   t.push(15 + 1000, 70);               // a very long gap: only the newest N slots survive
+   assert(t.n == TempHistory::N && t.v[TempHistory::N - 1] == 70 && std::isnan(t.v[0]));
+
    puts("pacing ok");
    return 0;
 }

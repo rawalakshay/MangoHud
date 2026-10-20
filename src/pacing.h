@@ -58,6 +58,32 @@ struct PacingNumbers {
    float mn, mx;
 };
 
+/**
+ * The panel's temperature history: one slot per slice (1.5 s in the panel), oldest first, NaN where the slice had no
+ * reading. Slices nobody rendered (overlay hidden, loading screen) are filled with NaN so the strip stays a true timeline.
+ */
+struct TempHistory {
+   static constexpr int N = 40;
+   float v[N] = {};
+   int n = 0;
+   uint64_t slice = ~0ull; // the slice of v[n - 1]
+
+   /** Record the reading for monotonic slice `s`; `temp <= 0` means no reading. Starts at the first real reading. */
+   void push(uint64_t s, float temp) {
+      if (n == 0 && !(temp > 0)) return;
+      if (s == slice) return;
+      const uint64_t blanks = slice == ~0ull ? 0 : std::min<uint64_t>(s - slice - 1, N);
+      for (uint64_t i = 0; i < blanks; i++) add(NAN);
+      add(temp > 0 ? temp : NAN);
+      slice = s;
+   }
+private:
+   void add(float x) {
+      if (n == N) { std::move(v + 1, v + N, v); n--; }
+      v[n++] = x;
+   }
+};
+
 // Fonts the panel bakes into the atlas (face: 0 Mono SemiBold, 1 Mono Medium, 2 Sans Cond SemiBold, 3 Sans Cond Medium).
 enum PacingFont { PF_MONO_SEMI_72, PF_MONO_SEMI_26, PF_MONO_SEMI_20, PF_MONO_SEMI_16, PF_MONO_SEMI_13,
                   PF_MONO_MED_13, PF_SANS_SEMI_20, PF_SANS_SEMI_16, PF_SANS_SEMI_14, PF_SANS_MED_13, PF_COUNT };
